@@ -1,35 +1,45 @@
 // SearchresultScreen.tsx
 
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import React from "react";
+import React, { useState } from "react";
 import {
   Image,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import type { RootStackParamList } from "../../App";
 
-type Props = NativeStackScreenProps<RootStackParamList, "SearchresultScreen">;
+type Props = NativeStackScreenProps<
+  RootStackParamList,
+  "SearchresultScreen"
+>;
 
 const results = [
   {
-    title: "2026 아시아미래기업포럼 참가 안내",
+    title:
+      "2026학년도 국가우수장학금(이공계) 재학중우수자(2년지원) 유형 신규장학생 신청 안내",
     date: "2026.05.08",
-    tags: ["전체 대상", "행사", "소프트웨어학과"],
+    tags: ["학부 재학생", "항공경영대", "항공교통물류"],
   },
   {
-    title: "2026 하계 현장실습 모집 안내",
-    date: "2026.05.07",
-    tags: ["학부 재학생", "학과 취업공지", "AI융합대"],
+    title: "2026년 서울독립유공자후손장학금 선발 안내",
+    date: "2026.05.08",
+    tags: ["전체 공통", "장학/대출", "공식 홈페이지"],
   },
   {
-    title: "2026 비교과 프로그램 신청 안내",
-    date: "2026.05.05",
-    tags: ["재학생 비교과", "일반", "소프트웨어학과"],
+    title: "2026년 화성시인재육성재단 「꿈드림 장학금」안내",
+    date: "2026.05.06",
+    tags: ["전체 공통", "장학/대출", "공식 홈페이지"],
+  },
+  {
+    title: "KICS 한국통신학회 장학금 지원 대상자 선발 지원자 모집 안내",
+    date: "2026.04.27",
+    tags: ["전체 공통", "장학/대출", "공식 홈페이지"],
   },
 ];
 
@@ -53,25 +63,31 @@ function TagChip({ label, type = "default" }: TagChipProps) {
 }
 
 export default function SearchresultScreen({ navigation }: Props) {
+  const [searchText, setSearchText] = useState("장학금");
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View style={styles.titleRow}>
-            <Text style={styles.noticeText}>NOTICE</Text>
+        <View style={styles.logoRow}>
+          <Image
+            source={require("../../assets/images/kau_logo_white_transparent.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
 
-            <Image
-              source={require("../../assets/images/kau_logo_white_transparent.png")}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
+          <Text style={styles.noticeText}>notice</Text>
         </View>
 
-        <View style={styles.headerBottom}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>← 검색 결과</Text>
-          </TouchableOpacity>
+        <View style={styles.searchBar}>
+          <Text style={styles.searchIcon}>⌕</Text>
+
+          <TextInput
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholder="공지 제목, 태그 검색 ..."
+            placeholderTextColor="#C4C4C4"
+            style={styles.searchInput}
+          />
         </View>
       </View>
 
@@ -80,12 +96,13 @@ export default function SearchresultScreen({ navigation }: Props) {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.resultTitle}>검색된 공지</Text>
+        <Text style={styles.resultTitle}>공지 목록</Text>
 
         {results.map((item, index) => (
           <TouchableOpacity
             key={index}
             style={styles.noticeCard}
+            activeOpacity={0.8}
             onPress={() => navigation.navigate("NoticeDetailTab")}
           >
             <Text style={styles.noticeTitle}>{item.title}</Text>
@@ -106,16 +123,16 @@ export default function SearchresultScreen({ navigation }: Props) {
           style={styles.tabItem}
           onPress={() => navigation.navigate("Homescreen")}
         >
-          <Text style={styles.tabIcon}>🏠</Text>
-          <Text style={styles.inactiveTabText}>홈</Text>
+          <Text style={styles.tabIcon}>⌂</Text>
+          <Text style={styles.tabText}>홈</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.tabItem}
           onPress={() => navigation.navigate("ChatbotScreen")}
         >
-          <Text style={styles.tabIcon}>💬</Text>
-          <Text style={styles.activeTabText}>챗봇</Text>
+          <Text style={styles.tabIcon}>🗨</Text>
+          <Text style={styles.tabText}>챗봇</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -125,48 +142,56 @@ export default function SearchresultScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F2F4F9",
   },
 
   header: {
-    backgroundColor: "#002870",
-    paddingTop: 36,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    gap: 10,
+    height: 125,
+    backgroundColor: "#0B2D78",
+    paddingTop: 30,
+    paddingHorizontal: 14,
+    paddingBottom: 15,
   },
 
-  headerTop: {
-    height: 40,
+  logoRow: {
+    flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-  },
-
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  noticeText: {
-    fontSize: 23,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    marginRight: 8,
+    marginBottom: 12,
   },
 
   logo: {
-    width: 80,
-    height: 40,
+    width: 74,
+    height: 28,
+    marginRight: 6,
   },
 
-  headerBottom: {
-    alignItems: "flex-start",
-  },
-
-  backText: {
-    fontSize: 20,
+  noticeText: {
+    fontSize: 18,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+
+  searchBar: {
+    height: 38,
+    borderRadius: 8,
+    backgroundColor: "rgba(159,160,160,0.55)",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+  },
+
+  searchIcon: {
+    fontSize: 22,
+    color: "#C4C4C4",
+    marginRight: 6,
+  },
+
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: "#FFFFFF",
+    paddingVertical: 0,
   },
 
   contentArea: {
@@ -175,17 +200,17 @@ const styles = StyleSheet.create({
   },
 
   contentContainer: {
-    paddingTop: 20,
-    paddingHorizontal: 16,
-    paddingBottom: 30,
-    gap: 12,
-  },
+  paddingHorizontal: 12,
+  paddingTop: 14,
+  paddingBottom: 18,
+  gap: 12,
+},
 
   resultTitle: {
-    fontSize: 22,
+    fontSize: 17,
     fontWeight: "700",
     color: "#000000",
-    marginBottom: 8,
+    marginBottom: 12,
   },
 
   noticeCard: {
@@ -239,13 +264,13 @@ const styles = StyleSheet.create({
   },
 
   bottomTab: {
-    height: 76,
+    height: 58,
+    backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
     borderTopColor: "#E5E7EB",
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
   },
 
   tabItem: {
@@ -254,17 +279,13 @@ const styles = StyleSheet.create({
   },
 
   tabIcon: {
-    fontSize: 22,
-    marginBottom: 4,
-  },
-
-  inactiveTabText: {
-    fontSize: 11,
+    fontSize: 24,
     color: "#9FA0A0",
+    marginBottom: 2,
   },
 
-  activeTabText: {
-    fontSize: 11,
-    color: "#595757",
+  tabText: {
+    fontSize: 10,
+    color: "#9FA0A0",
   },
 });

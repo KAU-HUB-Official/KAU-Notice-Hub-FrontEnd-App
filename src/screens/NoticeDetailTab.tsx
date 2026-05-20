@@ -120,7 +120,7 @@ export default function NoticeDetailTab({ navigation }: Props) {
           style={styles.tabItem}
           onPress={() => navigation.navigate("Homescreen")}
         >
-          <Text style={styles.tabIcon}>🏠</Text>
+          <Text style={styles.tabIcon}>⌂</Text>
           <Text style={styles.inactiveTabText}>홈</Text>
         </TouchableOpacity>
 
@@ -128,7 +128,7 @@ export default function NoticeDetailTab({ navigation }: Props) {
           style={styles.tabItem}
           onPress={() => navigation.navigate("ChatbotScreen")}
         >
-          <Text style={styles.tabIcon}>💬</Text>
+          <Text style={styles.tabIcon}>🗨</Text>
           <Text style={styles.activeTabText}>챗봇</Text>
         </TouchableOpacity>
       </View>

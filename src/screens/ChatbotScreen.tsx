@@ -1,9 +1,11 @@
 // ChatbotScreen.tsx
 
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import React from "react";
+import React, { useState } from "react";
 import {
   Image,
+  KeyboardAvoidingView,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -16,87 +18,131 @@ import type { RootStackParamList } from "../../App";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ChatbotScreen">;
 
-type TagChipProps = {
-  label: string;
-  type?: "default" | "green" | "blue";
+type Message = {
+  id: number;
+  text: string;
+  sender: "bot" | "user";
 };
 
-function TagChip({ label, type = "default" }: TagChipProps) {
-  return (
-    <View
-      style={[
-        styles.tagChip,
-        type === "green" && styles.greenChip,
-        type === "blue" && styles.blueChip,
-      ]}
-    >
-      <Text style={styles.tagText}>{label}</Text>
-    </View>
-  );
-}
-
 export default function ChatbotScreen({ navigation }: Props) {
+  const [inputText, setInputText] = useState("");
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: 1,
+      sender: "bot",
+      text:
+        "공지 데이터 기반으로 답변합니다.\n일정/제출 요건처럼 중요한 내용은 원문 공지 링크를 함께 확인하세요.",
+    },
+  ]);
+
+  const handleSend = () => {
+    const trimmed = inputText.trim();
+
+    if (!trimmed) return;
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        sender: "user",
+        text: trimmed,
+      },
+    ]);
+
+    setInputText("");
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View style={styles.titleRow}>
-            <Text style={styles.noticeText}>NOTICE</Text>
-            <Image
-              source={require("../../assets/images/kau_logo_white_transparent.png")}
-              style={styles.logo}
-              resizeMode="contain"
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <View style={styles.titleRow}>
+              <Text style={styles.noticeText}>NOTICE</Text>
+              <Image
+                source={require("../../assets/images/kau_logo_white_transparent.png")}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
+
+          <View style={styles.searchBar}>
+            <Text style={styles.searchIcon}>⌕</Text>
+            <TextInput
+              placeholder="공지 제목, 태그 검색 ..."
+              placeholderTextColor="#9FA0A0"
+              style={styles.searchInput}
+              onSubmitEditing={() => navigation.navigate("SearchresultScreen")}
             />
           </View>
         </View>
 
-        <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
-          <TextInput
-            placeholder="공지 제목, 태그 검색 ..."
-            placeholderTextColor="#9FA0A0"
-            style={styles.searchInput}
-            onSubmitEditing={() => navigation.navigate("SearchresultScreen")}
-          />
-        </View>
-      </View>
-
-      <ScrollView
-        style={styles.contentArea}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.chatContainer}>
-          <View style={styles.chatBox}>
-            <Text style={styles.chatText}>
-              공지 데이터 기반으로 답변합니다.
-              {"\n"}
-              일정/제출 요건처럼 중요한 내용은 원문 공지 링크를 함께 확인하세요.
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.tagRow}>
-          <TagChip label="장학" />
-          <TagChip label="행사" type="green" />
-          <TagChip label="소프트웨어학과" type="blue" />
-        </View>
-      </ScrollView>
-
-      <View style={styles.bottomTab}>
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => navigation.navigate("Homescreen")}
+        <ScrollView
+          style={styles.contentArea}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.tabIcon}>🏠</Text>
-          <Text style={styles.inactiveTabText}>홈</Text>
-        </TouchableOpacity>
+          {messages.map((message) => (
+            <View
+              key={message.id}
+              style={[
+                styles.messageRow,
+                message.sender === "user" && styles.userMessageRow,
+              ]}
+            >
+              <View
+                style={[
+                  styles.chatBox,
+                  message.sender === "user" && styles.userChatBox,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.chatText,
+                    message.sender === "user" && styles.userChatText,
+                  ]}
+                >
+                  {message.text}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
 
-        <TouchableOpacity style={styles.tabItem}>
-          <Text style={styles.tabIcon}>💬</Text>
-          <Text style={styles.activeTabText}>챗봇</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.chatInputArea}>
+          <TextInput
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder="메시지를 입력하세요"
+            placeholderTextColor="#9FA0A0"
+            style={styles.chatInput}
+            multiline
+          />
+
+          <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
+            <Text style={styles.sendButtonText}>전송</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.bottomTab}>
+          <TouchableOpacity
+            style={styles.tabItem}
+            onPress={() => navigation.navigate("Homescreen")}
+          >
+            <Text style={styles.tabIcon}>⌂</Text>
+            <Text style={styles.inactiveTabText}>홈</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.tabItem}>
+            <Text style={styles.tabIcon}>🗨</Text>
+            <Text style={styles.activeTabText}>챗봇</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -105,6 +151,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
+  },
+
+  keyboardView: {
+    flex: 1,
   },
 
   header: {
@@ -168,57 +218,77 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingHorizontal: 16,
     paddingBottom: 20,
-    gap: 15,
+    gap: 12,
   },
 
-  chatContainer: {
+  messageRow: {
     width: "100%",
     alignItems: "flex-start",
   },
 
+  userMessageRow: {
+    alignItems: "flex-end",
+  },
+
   chatBox: {
-    width: 280,
+    maxWidth: "78%",
     backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    padding: 10,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+
+  userChatBox: {
+    backgroundColor: "#002870",
   },
 
   chatText: {
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 12,
+    lineHeight: 17,
     color: "#000000",
   },
 
-  tagRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
+  userChatText: {
+    color: "#FFFFFF",
   },
 
-  tagChip: {
-    height: 27,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#000000",
+  chatInputArea: {
+    minHeight: 58,
     backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+  },
+
+  chatInput: {
+    flex: 1,
+    minHeight: 40,
+    maxHeight: 90,
+    backgroundColor: "#F2F4F9",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: "#000000",
+  },
+
+  sendButton: {
+    height: 40,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: "#002870",
     justifyContent: "center",
     alignItems: "center",
   },
 
-  greenChip: {
-    backgroundColor: "rgba(61,157,96,0.2)",
-    borderColor: "#3D9D60",
-  },
-
-  blueChip: {
-    backgroundColor: "rgba(0,64,152,0.2)",
-    borderColor: "#004098",
-  },
-
-  tagText: {
-    fontSize: 11,
-    color: "#000000",
+  sendButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 
   bottomTab: {
@@ -244,10 +314,12 @@ const styles = StyleSheet.create({
   inactiveTabText: {
     fontSize: 11,
     color: "#9FA0A0",
+    fontWeight: "700",
   },
 
   activeTabText: {
     fontSize: 11,
     color: "#595757",
+    fontWeight: "700",
   },
 });

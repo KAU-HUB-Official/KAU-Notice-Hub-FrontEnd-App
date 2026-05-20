@@ -158,7 +158,7 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Text style={styles.searchIcon}>⌕</Text>
           <TextInput
             placeholder="공지 제목, 태그 검색 ..."
             placeholderTextColor="#9FA0A0"
@@ -249,7 +249,7 @@ export default function HomeScreen({ navigation }: Props) {
 
       <View style={styles.bottomTab}>
         <TouchableOpacity style={styles.tabItem}>
-          <Text style={styles.tabIcon}>🏠</Text>
+          <Text style={styles.tabIcon}>⌂</Text>
           <Text style={styles.activeTabText}>홈</Text>
         </TouchableOpacity>
 
@@ -257,7 +257,7 @@ export default function HomeScreen({ navigation }: Props) {
           style={styles.tabItem}
           onPress={() => navigation.navigate("ChatbotScreen")}
         >
-          <Text style={styles.tabIcon}>💬</Text>
+          <Text style={styles.tabIcon}>🗨</Text>
           <Text style={styles.inactiveTabText}>챗봇</Text>
         </TouchableOpacity>
       </View>
