@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import type { RootStackParamList } from "../../App";
+import { sendChat } from "../api/api";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ChatbotScreen">;
 
@@ -26,6 +27,8 @@ type Message = {
 
 export default function ChatbotScreen({ navigation }: Props) {
   const [inputText, setInputText] = useState("");
+  const [searchText, setSearchText] = useState("");
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -35,21 +38,59 @@ export default function ChatbotScreen({ navigation }: Props) {
     },
   ]);
 
-  const handleSend = () => {
+  const handleSearch = () => {
+    const trimmed = searchText.trim();
+
+    if (!trimmed) return;
+
+    navigation.navigate("SearchresultScreen", {
+      q: trimmed,
+    });
+  };
+
+  const handleSend = async () => {
     const trimmed = inputText.trim();
 
     if (!trimmed) return;
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        sender: "user",
-        text: trimmed,
-      },
-    ]);
+    const userMessage: Message = {
+      id: Date.now(),
+      sender: "user",
+      text: trimmed,
+    };
 
+    setMessages((prev) => [...prev, userMessage]);
     setInputText("");
+
+    try {
+      const data = await sendChat({
+        question: trimmed,
+        history: messages
+          .filter((message) => message.id !== 1)
+          .map((message) => ({
+            role: message.sender === "user" ? "user" : "assistant",
+            content: message.text,
+          })),
+      });
+
+      const botMessage: Message = {
+        id: Date.now() + 1,
+        sender: "bot",
+        text: data.answer || "답변을 불러오지 못했습니다.",
+      };
+
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      console.error("챗봇 API 오류:", error);
+
+      const errorMessage: Message = {
+        id: Date.now() + 2,
+        sender: "bot",
+        text: "챗봇 응답을 불러오는 중 오류가 발생했습니다.",
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
+    }
   };
 
   return (
@@ -73,10 +114,16 @@ export default function ChatbotScreen({ navigation }: Props) {
           <View style={styles.searchBar}>
             <Text style={styles.searchIcon}>⌕</Text>
             <TextInput
+              value={searchText}
+              onChangeText={setSearchText}
               placeholder="공지 제목, 태그 검색 ..."
               placeholderTextColor="#9FA0A0"
               style={styles.searchInput}
-              onSubmitEditing={() => navigation.navigate("SearchresultScreen")}
+              autoCapitalize="none"
+              autoCorrect={false}
+              multiline={false}
+              returnKeyType="search"
+              onSubmitEditing={handleSearch}
             />
           </View>
         </View>
@@ -120,7 +167,11 @@ export default function ChatbotScreen({ navigation }: Props) {
             placeholder="메시지를 입력하세요"
             placeholderTextColor="#9FA0A0"
             style={styles.chatInput}
-            multiline
+            autoCapitalize="none"
+            autoCorrect={false}
+            multiline={false}
+            returnKeyType="send"
+            onSubmitEditing={handleSend}
           />
 
           <TouchableOpacity style={styles.sendButton} onPress={handleSend}>

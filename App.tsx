@@ -11,9 +11,13 @@ import SplashScreen from "./src/screens/SplashScreen";
 export type RootStackParamList = {
   SplashScreen: undefined;
   Homescreen: undefined;
-  ChatbotScreen : undefined;
-  NoticeDetailTab: undefined;
-  SearchresultScreen: undefined;
+  ChatbotScreen: undefined;
+  NoticeDetailTab: {
+    noticeId: string;
+  };
+  SearchresultScreen: {
+    q?: string;
+  } | undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();

@@ -1,8 +1,9 @@
 // NoticeDetailTab.tsx
 
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Linking,
   SafeAreaView,
@@ -12,9 +13,32 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Markdown from "react-native-markdown-display";
 import type { RootStackParamList } from "../../App";
+import { getNoticeDetail } from "../api/api";
 
 type Props = NativeStackScreenProps<RootStackParamList, "NoticeDetailTab">;
+
+type NoticeDetail = {
+  id: string;
+  title: string;
+  content?: string;
+  summary?: string;
+  url?: string;
+  source?: string;
+  sources?: string[];
+  audienceGroup?: string;
+  sourceGroup?: string;
+  sourceGroups?: string[];
+  category?: string;
+  department?: string;
+  date?: string;
+  tags?: string[];
+  attachments?: {
+    name: string;
+    url: string;
+  }[];
+};
 
 type TagChipProps = {
   label: string;
@@ -35,10 +59,58 @@ function TagChip({ label, type = "default" }: TagChipProps) {
   );
 }
 
-export default function NoticeDetailTab({ navigation }: Props) {
-  const openOriginalLink = () => {
-    Linking.openURL("https://e.asiae.co.kr/afef2026/#program");
+const cleanMarkdown = (text?: string) => {
+  if (!text) return "";
+
+  return text
+    .replace(/!\[(.*?)\]\((\S+)\s+"[^"]*"\)/g, "![$1]($2)")
+    .replace(/^(\s*)[•●○ㅇ]\s*/gm, "$1- ")
+    .replace(/^(\s*)\*\s*/gm, "$1- ")
+    .replace(/([^\n])\n[-*]/g, "$1\n\n-")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+};
+
+export default function NoticeDetailTab({ navigation, route }: Props) {
+  const { noticeId } = route.params as { noticeId?: string };
+
+  const [notice, setNotice] = useState<NoticeDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const loadNoticeDetail = async () => {
+    if (!noticeId) {
+      console.error("noticeId가 없습니다.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const data = await getNoticeDetail(noticeId);
+
+      console.log("공지 상세:", data);
+
+      setNotice(data);
+    } catch (error) {
+      console.error("공지 상세 불러오기 실패:", error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    loadNoticeDetail();
+  }, [noticeId]);
+
+  const openOriginalLink = () => {
+    if (notice?.url) {
+      Linking.openURL(notice.url);
+    }
+  };
+
+  const firstTag = notice?.audienceGroup || notice?.tags?.[0] || "전체 대상";
+  const secondTag = notice?.category || notice?.tags?.[1] || "일반";
+  const thirdTag = notice?.department || notice?.tags?.[2] || "공통";
 
   return (
     <SafeAreaView style={styles.container}>
@@ -46,6 +118,7 @@ export default function NoticeDetailTab({ navigation }: Props) {
         <View style={styles.headerTop}>
           <View style={styles.titleRow}>
             <Text style={styles.noticeText}>NOTICE</Text>
+
             <Image
               source={require("../../assets/images/kau_logo_white_transparent.png")}
               style={styles.logo}
@@ -61,58 +134,62 @@ export default function NoticeDetailTab({ navigation }: Props) {
         </View>
       </View>
 
-      <ScrollView style={styles.contentArea} showsVerticalScrollIndicator={false}>
-        <View style={styles.noticeSection}>
-          <View style={styles.noticeTagRow}>
-            <View style={styles.tagGroup}>
-              <TagChip label="전체 대상" />
-              <TagChip label="행사" type="green" />
-              <TagChip label="소프트웨어학과" type="blue" />
+      <ScrollView
+        style={styles.contentArea}
+        showsVerticalScrollIndicator={false}
+      >
+        {loading ? (
+          <ActivityIndicator
+            size="large"
+            color="#002870"
+            style={{ marginTop: 40 }}
+          />
+        ) : !notice ? (
+          <Text style={styles.emptyText}>공지 상세를 불러올 수 없습니다.</Text>
+        ) : (
+          <View style={styles.noticeSection}>
+            <View style={styles.noticeTagRow}>
+              <View style={styles.tagGroup}>
+                <TagChip label={firstTag} />
+                <TagChip label={secondTag} type="green" />
+                <TagChip label={thirdTag} type="blue" />
+              </View>
+
+              <Text style={styles.dateText}>{notice.date || ""}</Text>
             </View>
 
-            <Text style={styles.dateText}>2026.05.08.</Text>
-          </View>
-
-          <View style={styles.titleContainer}>
-            <Text style={styles.noticeTitle}>
-              2026 아시아미래기업포럼(부제 : 스페이스 노믹스) 참가 안내(무료)
-            </Text>
-          </View>
-
-          <View style={styles.noticeContent}>
-            <View style={styles.summaryBox}>
-              <Text style={styles.sectionLabel}>요약</Text>
-              <Text style={styles.contentText}>
-                우리 대학 학생 및 교직원 누구나 참석하실 수 있는 무료 행사입니다.
-                많은 신청 바랍니다.
-                {"\n\n"}
-                더 자세한 프로그램 내용 확인 :
-                {"\n"}
-                https://e.asiae.co.kr/afef2026/#program
-              </Text>
+            <View style={styles.titleContainer}>
+              <Text style={styles.noticeTitle}>{notice.title}</Text>
             </View>
 
-            <View style={styles.bodyBox}>
-              <Text style={styles.sectionLabel}>본문</Text>
-              <Text style={styles.contentText}>
-                우리 대학 학생 및 교직원 누구나 참석하실 수 있는 무료 행사입니다.
-                많은 신청 바랍니다.
-                {"\n\n"}
-                더 자세한 프로그램 내용 확인 :
-                {"\n"}
-                https://e.asiae.co.kr/afef2026/#program
-                {"\n\n"}
-                참가 신청 :
-                {"\n"}
-                https://docs.google.com/forms/u/1/d/e/1FAIpQLSc-ZLaJwvC5anepvmA7suZK3hBFgtNhdksJzjd7_twoIKC5XA/viewform
-              </Text>
-            </View>
-          </View>
+            <View style={styles.noticeContent}>
+              <View style={styles.summaryBox}>
+                <Text style={styles.sectionLabel}>요약</Text>
 
-          <TouchableOpacity style={styles.linkButton} onPress={openOriginalLink}>
-            <Text style={styles.linkButtonText}>원문 보러가기</Text>
-          </TouchableOpacity>
-        </View>
+                <Markdown style={markdownStyles}>
+                  {cleanMarkdown(notice.summary) || "요약 정보가 없습니다."}
+                </Markdown>
+              </View>
+
+              <View style={styles.bodyBox}>
+                <Text style={styles.sectionLabel}>본문</Text>
+
+                <Markdown style={markdownStyles}>
+                  {cleanMarkdown(notice.content) || "본문 정보가 없습니다."}
+                </Markdown>
+              </View>
+            </View>
+
+            {notice.url ? (
+              <TouchableOpacity
+                style={styles.linkButton}
+                onPress={openOriginalLink}
+              >
+                <Text style={styles.linkButtonText}>원문 보러가기</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        )}
       </ScrollView>
 
       <View style={styles.bottomTab}>
@@ -135,6 +212,72 @@ export default function NoticeDetailTab({ navigation }: Props) {
     </SafeAreaView>
   );
 }
+
+const markdownStyles = {
+  body: {
+    fontSize: 15,
+    lineHeight: 24,
+    color: "#000000",
+  },
+
+  heading1: {
+    fontSize: 24,
+    fontWeight: "700" as const,
+    marginBottom: 12,
+    color: "#000000",
+  },
+
+  heading2: {
+    fontSize: 20,
+    fontWeight: "700" as const,
+    marginBottom: 10,
+    color: "#000000",
+  },
+
+  heading3: {
+    fontSize: 18,
+    fontWeight: "700" as const,
+    marginBottom: 8,
+    color: "#000000",
+  },
+
+  paragraph: {
+    marginBottom: 10,
+  },
+
+  strong: {
+    fontWeight: "700" as const,
+  },
+
+  bullet_list: {
+    marginBottom: 10,
+    paddingLeft: 8,
+  },
+
+  ordered_list: {
+    marginBottom: 10,
+    paddingLeft: 8,
+  },
+
+  list_item: {
+    marginBottom: 6,
+  },
+
+  bullet_list_icon: {
+    color: "#000000",
+    fontSize: 14,
+  },
+
+  bullet_list_content: {
+    flex: 1,
+  },
+
+  image: {
+    width: 260,
+    height: 360,
+    resizeMode: "contain" as const,
+  },
+};
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
@@ -279,12 +422,6 @@ const styles = StyleSheet.create({
     color: "#000000",
   },
 
-  contentText: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: "#000000",
-  },
-
   linkButton: {
     width: 100,
     height: 33,
@@ -328,5 +465,12 @@ const styles = StyleSheet.create({
   activeTabText: {
     fontSize: 11,
     color: "#595757",
+  },
+
+  emptyText: {
+    fontSize: 14,
+    color: "#9FA0A0",
+    textAlign: "center",
+    marginTop: 40,
   },
 });

@@ -1,8 +1,9 @@
 // HomeScreen.tsx
 
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   SafeAreaView,
   ScrollView,
@@ -13,6 +14,7 @@ import {
   View,
 } from "react-native";
 import type { RootStackParamList } from "../../App";
+import { getNotices } from "../api/api";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Homescreen">;
 
@@ -56,29 +58,12 @@ const categoryTags = [
 ];
 
 const majorTags = [
+  "전체 학과",
   "소프트웨어학과",
   "항공우주공학과",
   "항공전자정보공학부",
   "신소재공학과",
   "스마트드론공학과",
-];
-
-const notices = [
-  {
-    title: "2026 아시아미래기업포럼 참가 안내",
-    date: "2026.05.08",
-    tags: ["전체 대상", "행사", "소프트웨어학과"],
-  },
-  {
-    title: "2026 하계 현장실습 모집 안내",
-    date: "2026.05.07",
-    tags: ["학부 재학생", "학과 취업공지", "AI융합대"],
-  },
-  {
-    title: "2026 비교과 프로그램 신청 안내",
-    date: "2026.05.05",
-    tags: ["재학생 비교과, 글로벌 프로그램", "일반", "소프트웨어학과"],
-  },
 ];
 
 type TagType = "default" | "green" | "blue";
@@ -88,6 +73,16 @@ type TagChipProps = {
   type?: TagType;
   selected?: boolean;
   onPress?: () => void;
+};
+
+type NoticeItem = {
+  id: string;
+  title: string;
+  date?: string;
+  audienceGroup?: string;
+  category?: string;
+  department?: string;
+  tags?: string[];
 };
 
 function TagChip({
@@ -111,12 +106,6 @@ function TagChip({
   );
 }
 
-type NoticeItem = {
-  title: string;
-  date: string;
-  tags: string[];
-};
-
 function NoticeCard({
   item,
   onPress,
@@ -124,24 +113,87 @@ function NoticeCard({
   item: NoticeItem;
   onPress: () => void;
 }) {
+  const firstTag = item.audienceGroup || item.tags?.[0] || "전체 대상";
+  const secondTag = item.category || item.tags?.[1] || "일반";
+  const thirdTag = item.department || item.tags?.[2] || "공통";
+
   return (
     <TouchableOpacity style={styles.noticeCard} onPress={onPress}>
       <Text style={styles.noticeTitle}>{item.title}</Text>
-      <Text style={styles.noticeDate}>{item.date}</Text>
+
+      <Text style={styles.noticeDate}>{item.date || ""}</Text>
 
       <View style={styles.noticeTagRow}>
-        <TagChip label={item.tags[0]} />
-        <TagChip label={item.tags[1]} type="green" />
-        <TagChip label={item.tags[2]} type="blue" />
+        <TagChip label={firstTag} />
+        <TagChip label={secondTag} type="green" />
+        <TagChip label={thirdTag} type="blue" />
       </View>
     </TouchableOpacity>
   );
 }
 
 export default function HomeScreen({ navigation }: Props) {
-  const [selectedTarget, setSelectedTarget] = useState("전체 대상");
-  const [selectedCategory, setSelectedCategory] = useState("전체 중분류");
-  const [selectedMajor, setSelectedMajor] = useState("소프트웨어학과");
+  const [searchText, setSearchText] = useState("");
+
+  const [selectedTarget, setSelectedTarget] =
+    useState("전체 대상");
+
+  const [selectedCategory, setSelectedCategory] =
+    useState("전체 중분류");
+
+  const [selectedMajor, setSelectedMajor] =
+    useState("전체 학과");
+
+  const [notices, setNotices] = useState<NoticeItem[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const loadNotices = async () => {
+    try {
+      setLoading(true);
+
+      const data = await getNotices({
+        audience:
+          selectedTarget === "전체 대상"
+            ? undefined
+            : selectedTarget,
+
+        category:
+          selectedCategory === "전체 중분류"
+            ? undefined
+            : selectedCategory,
+
+        department:
+          selectedMajor === "전체 학과"
+            ? undefined
+            : selectedMajor,
+
+        page: 1,
+        pageSize: 10,
+      });
+
+      console.log("공지 목록:", data);
+
+      setNotices(data.items || []);
+    } catch (error) {
+      console.error("공지 목록 불러오기 실패:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadNotices();
+  }, [selectedTarget, selectedCategory, selectedMajor]);
+
+  const handleSearch = () => {
+    const trimmed = searchText.trim();
+
+    if (!trimmed) return;
+
+    navigation.navigate("SearchresultScreen", {
+      q: trimmed,
+    } as never);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -149,6 +201,7 @@ export default function HomeScreen({ navigation }: Props) {
         <View style={styles.headerTop}>
           <View style={styles.titleRow}>
             <Text style={styles.noticeText}>NOTICE</Text>
+
             <Image
               source={require("../../assets/images/kau_logo_white_transparent.png")}
               style={styles.logo}
@@ -159,11 +212,18 @@ export default function HomeScreen({ navigation }: Props) {
 
         <View style={styles.searchBar}>
           <Text style={styles.searchIcon}>⌕</Text>
+
           <TextInput
+            value={searchText}
+            onChangeText={setSearchText}
             placeholder="공지 제목, 태그 검색 ..."
             placeholderTextColor="#9FA0A0"
             style={styles.searchInput}
-            onSubmitEditing={() => navigation.navigate("SearchresultScreen")}
+            autoCapitalize="none"
+            autoCorrect={false}
+            multiline={false}
+            returnKeyType="search"
+            onSubmitEditing={handleSearch}
           />
         </View>
       </View>
@@ -177,6 +237,7 @@ export default function HomeScreen({ navigation }: Props) {
           <Text style={styles.sectionTitle}>공지 탐색</Text>
 
           <Text style={styles.filterLabel}>전체 분류</Text>
+
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -187,12 +248,17 @@ export default function HomeScreen({ navigation }: Props) {
                 key={tag}
                 label={tag}
                 selected={selectedTarget === tag}
-                onPress={() => setSelectedTarget(tag)}
+                onPress={() =>
+                  setSelectedTarget((prev) =>
+                    prev === tag ? "전체 대상" : tag
+                  )
+                }
               />
             ))}
           </ScrollView>
 
           <Text style={styles.filterLabel}>중분류</Text>
+
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -204,12 +270,19 @@ export default function HomeScreen({ navigation }: Props) {
                 label={tag}
                 type="green"
                 selected={selectedCategory === tag}
-                onPress={() => setSelectedCategory(tag)}
+                onPress={() =>
+                  setSelectedCategory((prev) =>
+                    prev === tag
+                      ? "전체 중분류"
+                      : tag
+                  )
+                }
               />
             ))}
           </ScrollView>
 
           <Text style={styles.filterLabel}>학과/전공</Text>
+
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -221,7 +294,13 @@ export default function HomeScreen({ navigation }: Props) {
                 label={tag}
                 type="blue"
                 selected={selectedMajor === tag}
-                onPress={() => setSelectedMajor(tag)}
+                onPress={() =>
+                  setSelectedMajor((prev) =>
+                    prev === tag
+                      ? "전체 학과"
+                      : tag
+                  )
+                }
               />
             ))}
           </ScrollView>
@@ -229,21 +308,45 @@ export default function HomeScreen({ navigation }: Props) {
 
         <View style={styles.noticeSection}>
           <View style={styles.selectedBox}>
-            <Text style={styles.selectedText}>선택된 분류</Text>
+            <Text style={styles.selectedText}>
+              선택된 분류
+            </Text>
+
             <Text style={styles.selectedValue}>
-              {selectedTarget} / {selectedCategory} / {selectedMajor}
+              {selectedTarget} / {selectedCategory} /{" "}
+              {selectedMajor}
             </Text>
           </View>
 
-          <Text style={styles.noticeSectionTitle}>공지 목록</Text>
+          <Text style={styles.noticeSectionTitle}>
+            공지 목록
+          </Text>
 
-          {notices.map((item, index) => (
-            <NoticeCard
-              key={index}
-              item={item}
-              onPress={() => navigation.navigate("NoticeDetailTab")}
+          {loading ? (
+            <ActivityIndicator
+              size="large"
+              color="#002870"
             />
-          ))}
+          ) : notices.length === 0 ? (
+            <Text style={styles.emptyText}>
+              표시할 공지가 없습니다.
+            </Text>
+          ) : (
+            notices.map((item) => (
+              <NoticeCard
+                key={item.id}
+                item={item}
+                onPress={() =>
+                  navigation.navigate(
+                    "NoticeDetailTab",
+                    {
+                      noticeId: item.id,
+                    } as never
+                  )
+                }
+              />
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -255,10 +358,14 @@ export default function HomeScreen({ navigation }: Props) {
 
         <TouchableOpacity
           style={styles.tabItem}
-          onPress={() => navigation.navigate("ChatbotScreen")}
+          onPress={() =>
+            navigation.navigate("ChatbotScreen")
+          }
         >
           <Text style={styles.tabIcon}>🗨</Text>
-          <Text style={styles.inactiveTabText}>챗봇</Text>
+          <Text style={styles.inactiveTabText}>
+            챗봇
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -463,5 +570,12 @@ const styles = StyleSheet.create({
   activeTabText: {
     fontSize: 11,
     color: "#595757",
+  },
+
+  emptyText: {
+    fontSize: 14,
+    color: "#9FA0A0",
+    textAlign: "center",
+    marginTop: 20,
   },
 });

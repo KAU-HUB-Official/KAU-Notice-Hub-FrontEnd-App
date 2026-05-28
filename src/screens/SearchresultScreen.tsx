@@ -1,8 +1,9 @@
 // SearchresultScreen.tsx
 
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   SafeAreaView,
   ScrollView,
@@ -13,42 +14,32 @@ import {
   View,
 } from "react-native";
 import type { RootStackParamList } from "../../App";
+import { getNotices } from "../api/api";
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
   "SearchresultScreen"
 >;
 
-const results = [
-  {
-    title:
-      "2026학년도 국가우수장학금(이공계) 재학중우수자(2년지원) 유형 신규장학생 신청 안내",
-    date: "2026.05.08",
-    tags: ["학부 재학생", "항공경영대", "항공교통물류"],
-  },
-  {
-    title: "2026년 서울독립유공자후손장학금 선발 안내",
-    date: "2026.05.08",
-    tags: ["전체 공통", "장학/대출", "공식 홈페이지"],
-  },
-  {
-    title: "2026년 화성시인재육성재단 「꿈드림 장학금」안내",
-    date: "2026.05.06",
-    tags: ["전체 공통", "장학/대출", "공식 홈페이지"],
-  },
-  {
-    title: "KICS 한국통신학회 장학금 지원 대상자 선발 지원자 모집 안내",
-    date: "2026.04.27",
-    tags: ["전체 공통", "장학/대출", "공식 홈페이지"],
-  },
-];
+type NoticeItem = {
+  id: string;
+  title: string;
+  date?: string;
+  audienceGroup?: string;
+  category?: string;
+  department?: string;
+  tags?: string[];
+};
 
 type TagChipProps = {
   label: string;
   type?: "default" | "green" | "blue";
 };
 
-function TagChip({ label, type = "default" }: TagChipProps) {
+function TagChip({
+  label,
+  type = "default",
+}: TagChipProps) {
   return (
     <View
       style={[
@@ -62,8 +53,52 @@ function TagChip({ label, type = "default" }: TagChipProps) {
   );
 }
 
-export default function SearchresultScreen({ navigation }: Props) {
-  const [searchText, setSearchText] = useState("장학금");
+export default function SearchresultScreen({
+  navigation,
+  route,
+}: Props) {
+  const initialQ = route.params?.q ?? "";
+
+  const [searchText, setSearchText] =
+    useState(initialQ);
+
+  const [results, setResults] = useState<
+    NoticeItem[]
+  >([]);
+
+  const [loading, setLoading] = useState(false);
+
+  const searchNotices = async (q: string) => {
+    try {
+      setLoading(true);
+
+      const data = await getNotices({
+        q,
+        page: 1,
+        pageSize: 20,
+      });
+
+      console.log("검색 결과:", data);
+
+      setResults(data.items || []);
+    } catch (error) {
+      console.error("검색 실패:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    searchNotices(initialQ);
+  }, [initialQ]);
+
+  const handleSearch = () => {
+    const trimmed = searchText.trim();
+
+    if (!trimmed) return;
+
+    searchNotices(trimmed);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -75,7 +110,9 @@ export default function SearchresultScreen({ navigation }: Props) {
             resizeMode="contain"
           />
 
-          <Text style={styles.noticeText}>notice</Text>
+          <Text style={styles.noticeText}>
+            NOTICE
+          </Text>
         </View>
 
         <View style={styles.searchBar}>
@@ -87,6 +124,11 @@ export default function SearchresultScreen({ navigation }: Props) {
             placeholder="공지 제목, 태그 검색 ..."
             placeholderTextColor="#C4C4C4"
             style={styles.searchInput}
+            autoCapitalize="none"
+            autoCorrect={false}
+            multiline={false}
+            returnKeyType="search"
+            onSubmitEditing={handleSearch}
           />
         </View>
       </View>
@@ -96,32 +138,83 @@ export default function SearchresultScreen({ navigation }: Props) {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.resultTitle}>공지 목록</Text>
+        <Text style={styles.resultTitle}>
+          공지 목록
+        </Text>
 
-        {results.map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.noticeCard}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate("NoticeDetailTab")}
-          >
-            <Text style={styles.noticeTitle}>{item.title}</Text>
+        {loading ? (
+          <ActivityIndicator
+            size="large"
+            color="#002870"
+          />
+        ) : results.length === 0 ? (
+          <Text style={styles.emptyText}>
+            검색 결과가 없습니다.
+          </Text>
+        ) : (
+          results.map((item) => {
+            const firstTag =
+              item.audienceGroup ||
+              item.tags?.[0] ||
+              "전체 대상";
 
-            <Text style={styles.noticeDate}>{item.date}</Text>
+            const secondTag =
+              item.category ||
+              item.tags?.[1] ||
+              "일반";
 
-            <View style={styles.noticeTagRow}>
-              <TagChip label={item.tags[0]} />
-              <TagChip label={item.tags[1]} type="green" />
-              <TagChip label={item.tags[2]} type="blue" />
-            </View>
-          </TouchableOpacity>
-        ))}
+            const thirdTag =
+              item.department ||
+              item.tags?.[2] ||
+              "공통";
+
+            return (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.noticeCard}
+                activeOpacity={0.8}
+                onPress={() =>
+                  navigation.navigate(
+                    "NoticeDetailTab",
+                    {
+                      noticeId: item.id,
+                    }
+                  )
+                }
+              >
+                <Text style={styles.noticeTitle}>
+                  {item.title}
+                </Text>
+
+                <Text style={styles.noticeDate}>
+                  {item.date || ""}
+                </Text>
+
+                <View style={styles.noticeTagRow}>
+                  <TagChip label={firstTag} />
+
+                  <TagChip
+                    label={secondTag}
+                    type="green"
+                  />
+
+                  <TagChip
+                    label={thirdTag}
+                    type="blue"
+                  />
+                </View>
+              </TouchableOpacity>
+            );
+          })
+        )}
       </ScrollView>
 
       <View style={styles.bottomTab}>
         <TouchableOpacity
           style={styles.tabItem}
-          onPress={() => navigation.navigate("Homescreen")}
+          onPress={() =>
+            navigation.navigate("Homescreen")
+          }
         >
           <Text style={styles.tabIcon}>⌂</Text>
           <Text style={styles.tabText}>홈</Text>
@@ -129,10 +222,14 @@ export default function SearchresultScreen({ navigation }: Props) {
 
         <TouchableOpacity
           style={styles.tabItem}
-          onPress={() => navigation.navigate("ChatbotScreen")}
+          onPress={() =>
+            navigation.navigate("ChatbotScreen")
+          }
         >
           <Text style={styles.tabIcon}>🗨</Text>
-          <Text style={styles.tabText}>챗봇</Text>
+          <Text style={styles.tabText}>
+            챗봇
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -287,5 +384,11 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 10,
     color: "#9FA0A0",
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#9FA0A0",
+    textAlign: "center",
+    marginTop: 20,
   },
 });
